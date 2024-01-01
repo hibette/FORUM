@@ -1,0 +1,126 @@
+version: "2.4"
+services:
+
+
+
+#Base de donne authen
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: testjwtauth
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+
+
+#Base de donne magasin
+  postgres4:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: testminiprojet
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-data4:/var/lib/postgresql/data
+    networks:
+      - backend
+
+
+
+
+
+#Eureka
+  eureka:
+    build:
+      context: ./PPP---EurekaServer
+    ports:
+      - "8761:8761"
+    image: "eureka"
+    networks:
+      - backend
+
+
+
+
+#APIGateWay
+  gateway:
+    build:
+      context: ./API---GateWay
+    environment:
+      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
+    ports:
+      - "8098:8098"
+    image: "gateway"
+    depends_on:
+      - eureka
+    networks:
+      - backend
+
+
+
+
+#Authentification
+  authentification:
+    build:
+      context: ./PPP---authentification
+    ports:
+      - "8091:8091"
+    image: "authentification"
+    depends_on:
+      - postgres
+      - eureka
+    environment:
+      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/testjwtauth
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:  
+      - backend
+  
+
+
+
+
+
+
+
+#magasin
+  magasin:
+    build:
+      context: ./PPP-MagasinMicroservice
+    ports:
+      - "8092:8092"
+    image: "magasin"
+    depends_on:
+      - postgres4
+      - eureka
+      - authentification
+    environment:
+      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres4:5432/testminiprojet
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:  
+      - backend
+
+
+
+
+
+    
+
+volumes:
+  postgres-data:
+  postgres-data4:
+networks:
+ backend:
+   driver: bridge
+
